@@ -81,8 +81,23 @@ def revertCall(table_name,action_name,action_values,action_conditions,table_colu
         
         testClause = ' AND '.join(["{} = '{}'".format(column.strip(),value.strip()) for column,value in zip(table_columns.split(','),action_values.split(','))])
         revertCall = ''.join([revertCall,testClause])
-        #print(revertCall)
-        
+        return revertCall
+    if action_name == 'DELETE':
+        revertCall = 'INSERT INTO {} '.format(table_name)
+        pairs = action_conditions.split(' AND ')
+        fields = []
+        values = []
+        for pair in pairs:
+            field, value = [x.strip() for x in pair.split(' = ')]
+            fields.append(field.replace("'",'').replace('"',''))
+            values.append(value)
+        print(['(',*[', '.join([x for x in fields])],')'])
+        fieldCall = ''.join(['(',*[', '.join([x for x in fields])],')'])
+        valueCall = ''.join(['(',*[', '.join([x for x in values])],')'])
+        revertCall = ''.join([revertCall,fieldCall,' VALUES ',valueCall])
+        #sql = "INSERT INTO customers (name, address) VALUES (%s, %s)"
+        #val = ('John', 'Highway 21')
+        print(revertCall)
         return revertCall
     else:
         raise AttributeError('Command "{}" not understood... sorry :-/'.format(action_name))
@@ -93,7 +108,7 @@ def revertID(mycursor,checkId):
     mycursor.execute("SELECT table_name,table_attributes FROM HISTORYTABLES WHERE id = {} ".format(table_id))
     table_name,table_columns = mycursor.fetchone()
 
-    mycursor.execute(revertCall(table_name,action_name,action_values,action_conditions,table_columns),log=True)
+    mycursor.execute(revertCall(table_name,action_name,action_values,action_conditions,table_columns),log=False)
     
 
 def decorator(self,execute):
@@ -120,20 +135,13 @@ def decorator(self,execute):
                 print('Inserting new with id {}'.format(tableID))
             else:
                 tableID = tableID[0]
-                
-            updateKey = True
+
             historyCall = 'INSERT INTO HISTORY (table_id, action_name, action_values, action_conditions) VALUES (%s, %s, %s, %s)'
             execute(historyCall,(tableID,action,vals,conditions))
-            historyKey = self.lastrowid
+            _ = self.lastrowid
+
             
-        else:
-            updateKey = False
-            
-        evaluation = execute(call,values)
-        #keyID = self.lastrowid
-        #if updateKey:
-        #    execute('UPDATE HISTORY SET row_id = "%s" WHERE id = "%s"',(keyID,historyKey))
-        return evaluation
+        return execute(call,values)
     return func
     
 
@@ -156,6 +164,10 @@ sql = "INSERT INTO customers (name, address) VALUES (%s, %s)"
 val = ('John', 'Highway 21')
 mycursor.execute(sql, val)
 
+sql = "DELETE from customers WHERE name = 'John'"
+
+mycursor.execute(sql)
+
 mycursor.execute("SHOW TABLES")
 tables = [x[0] for x in mycursor]
 print('\n\nDuring working:')
@@ -167,8 +179,11 @@ for table in tables:
     [print(x) for x in mycursor]
 print('\n\n')
 
-checkId = 1
+checkId = 2
 
+revertID(mycursor,checkId)
+
+checkId = 1
 revertID(mycursor,checkId)
 
 for table in tables:
