@@ -68,12 +68,13 @@ def revertCall(table_name,action_name,action_values,action_conditions,table_colu
         raise AttributeError('Command "{}" not understood... sorry :-/'.format(action_name))
     
 def revertID(mycursor,checkId):
-    mycursor.execute("SELECT * FROM HISTORY WHERE HISTORY.id = {} ".format(checkId))
-    id, table_id, action_name, action_values, action_conditions, action_time  = mycursor.fetchone()
-    mycursor.execute("SELECT table_name,table_attributes FROM HISTORYTABLES WHERE id = {} ".format(table_id))
-    table_name,table_columns = mycursor.fetchone()
-    mycursor.execute(revertCall(table_name,action_name,action_values,action_conditions,table_columns),log=False)
-    
+    mycursor.execute("SELECT * FROM HISTORY WHERE HISTORY.action_id = {} ".format(checkId))
+    reverts  = mycursor.fetchall()
+    for id, action_id, table_id, action_name, action_values, action_conditions, action_time in reverts:
+        mycursor.execute("SELECT table_name,table_attributes FROM HISTORYTABLES WHERE id = {} ".format(table_id))
+        table_name,table_columns = mycursor.fetchone()
+        mycursor.execute(revertCall(table_name,action_name,action_values,action_conditions,table_columns),log=False)
+        
 
 def decorator(self,execute):
     
@@ -113,13 +114,24 @@ def decorator(self,execute):
                     conditions = ' AND '.join(['{} = "{}"'.format(a,v) for a,v in zip(attributes[0].split(', '),vals)])
                 vals = None
 
+
+            localIDExecute = execute("SELECT action_id FROM HISTORY ORDER BY id DESC LIMIT 1")
+            localID = self.fetchone()
+            
+            if localID is None:
+                localID = 1
+            else:
+                localID = localID[0]+1 # Comes as a tuple from execute, add 1
+ 
+            
             if multiple:
                 for conds in conditions:
-                    historyCall = 'INSERT INTO HISTORY (table_id, action_name, action_values, action_conditions) VALUES (%s, %s, %s, %s)'
-                    execute(historyCall,(tableID,action,vals,conds))
+                    historyCall = 'INSERT INTO HISTORY (action_id, table_id, action_name, action_values, action_conditions) VALUES (%s, %s, %s, %s, %s)'
+                    execute(historyCall,(localID,tableID,action,vals,conds))
+
             else:
-                historyCall = 'INSERT INTO HISTORY (table_id, action_name, action_values, action_conditions) VALUES (%s, %s, %s, %s)'
-                execute(historyCall,(tableID,action,vals,conditions))
+                historyCall = 'INSERT INTO HISTORY (action_id,table_id, action_name, action_values, action_conditions) VALUES (%s, %s, %s, %s, %s)'
+                execute(historyCall,(localID,tableID,action,vals,conditions))
             _ = self.lastrowid
 
             
@@ -142,7 +154,7 @@ def connect(host, user, passwd, database):
     if "HISTORY" in tables:
             mycursor.execute("DROP TABLE HISTORY")
 
-    mycursor.execute("CREATE TABLE HISTORY (id INT AUTO_INCREMENT PRIMARY KEY, table_id INT, "
+    mycursor.execute("CREATE TABLE HISTORY (id INT AUTO_INCREMENT PRIMARY KEY, action_id INT, table_id INT, "
     "action_name VARCHAR(255), action_values VARCHAR(255), action_conditions VARCHAR(255), action_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
 
     if "HISTORYTABLES" in tables:
