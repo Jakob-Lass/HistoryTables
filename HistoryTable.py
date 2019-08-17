@@ -139,7 +139,6 @@ def connect(host, user, passwd, database):
 
     mycursor.execute("SHOW TABLES")
     tables = [x[0] for x in mycursor]
-    print(tables)
     if "HISTORY" in tables:
             mycursor.execute("DROP TABLE HISTORY")
 
