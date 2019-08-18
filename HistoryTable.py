@@ -140,12 +140,8 @@ def decorator(self,execute):
     
 
 
-def connect(host, user, passwd, database):
-    connection = mysql.connector.connect(
-        host=host,
-        user=user,
-        passwd=passwd,
-        database = database)
+def connect(*args,**kwargs):
+    connection = mysql.connector.connect(*args,**kwargs)
 
     mycursor = connection.cursor()
 
