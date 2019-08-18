@@ -38,6 +38,9 @@ if True:
     sql = "INSERT INTO customers (name, address) VALUES (%s, %s)"
     val = ('Janice', 'Highway 21')
     myCursor.execute(sql, val)
+    sql = "INSERT INTO customers (name, address) VALUES (%s, %s)"
+    val = ('Jack', 'Highway 22')
+    myCursor.execute(sql, val)
     #HistoryTable.printTables(mycursor)
 
 
@@ -51,7 +54,7 @@ HistoryTable.printTables(myCursor)
 checkId = 1
 HistoryTable.revertID(myCursor,checkId)
 
-checkId = 4
+checkId = 5
 HistoryTable.revertID(myCursor,checkId)
 
 #checkId = 4
@@ -60,8 +63,9 @@ HistoryTable.revertID(myCursor,checkId)
 
 HistoryTable.printTables(myCursor)
 
-#mydb.commit() # To commit actual changes
+connection.commit() # To commit actual changes
 
+connection.close()
 # List of calls:
 # CREATE TABLE customers (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(255), address VARCHAR(255))
 # ALTER TABLE customers ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY
